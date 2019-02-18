@@ -8,5 +8,5 @@ g = GremlinClient()
 #g.add_vertex(test_v1)
 #g.add_vertex(test_v2)
 
-#g.add_edge("5", "1")
+g.add_edge("4", "1")
 
