@@ -55,16 +55,24 @@ class GremlinClient:
 
         print(base)
 
-        callback = self.client.submitAsync(base)
+        try:
 
-        if callback.result() is not None:
+            callback = self.client.submitAsync(base)
 
-            print(callback.result().one())
-            print("Success at adding vertex")
+            if callback.result() is not None:
 
-        else:
+                print(callback.result().one())
+                print("Success at adding vertex")
 
-            print("Something went wrong when adding vertex")
+            else:
+
+                print("Something went wrong when adding vertex")
+
+        except Exception as e:
+
+            print("Error adding vertex", params[id])
+            print(e)
+
 
     def add_edge(self, id1, id2):
 
@@ -76,13 +84,20 @@ class GremlinClient:
         """
         base = "g.V('%s').addE('related_to').to(g.V('%s'))" % (id1, id2)
 
-        callback = self.client.submitAsync(base)
+        try:
 
-        if callback.result() is not None:
+            callback = self.client.submitAsync(base)
 
-            print(callback.result().one())
-            print("Success at adding edge")
+            if callback.result() is not None:
 
-        else:
+                print(callback.result().one())
+                print("Success at adding edge")
 
-            print("Something went wrong when adding edge")
+            else:
+
+                print("Something went wrong when adding edge")
+
+        except Exception as e:
+
+            print("Something went wrong when adding edge between", id1, "and", id2)
+            print(e)
