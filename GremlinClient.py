@@ -1,5 +1,6 @@
 from gremlin_python.driver import client, serializer
 import sys, traceback
+import json
 
 class GremlinClient:
 
@@ -47,7 +48,7 @@ class GremlinClient:
         keys = list(params.keys())
 
         id = keys[0]
-        base = "g.addV('topic').property('id', '%s')" % params[id]
+        base = "g.addV().property(id, '%s')" % params[id]
 
         for i in keys[1:]:
             new = ".property('%s', '%s')" % (i, params[i])
@@ -82,22 +83,48 @@ class GremlinClient:
         :param id2:
         :return:
         """
-        base = "g.V('%s').addE('related_to').to(g.V('%s'))" % (id1, id2)
+        base1 = "g.V('%s').addE('related_to').to(g.V('%s'))" % (id1, id2)
+        base2 = "g.V('%s').addE('related_to').to(g.V('%s'))" % (id2, id1)
+
+        edges = [base1, base2]
+
+        for i in edges:
+
+            try:
+
+                callback = self.client.submitAsync(i)
+
+                if callback.result() is not None:
+
+                    print(callback.result().one())
+                    print("Success at adding edge")
+
+                else:
+
+                    print("Something went wrong when adding edge")
+
+            except Exception as e:
+
+                print("Something went wrong when adding edge between", id1, "and", id2)
+                print(e)
+
+    def get_distance(self, id1, id2):
+
+        base = "g.V('%s').repeat(out().simplePath()).until(has('id', '%s')).path().limit(1)" % (id1, id2)
 
         try:
 
-            callback = self.client.submitAsync(base)
-
-            if callback.result() is not None:
-
-                print(callback.result().one())
-                print("Success at adding edge")
-
-            else:
-
-                print("Something went wrong when adding edge")
+            distance = self.client.submitAsync(base)
+            if distance.result() is not None:
+                distance = distance.result().one()
+                
+                return (len(distance[0]["labels"]) - 2)
 
         except Exception as e:
 
-            print("Something went wrong when adding edge between", id1, "and", id2)
+            print("Something went wrong when trying to get the distance between", id1, "and", id2)
             print(e)
+
+
+
+
