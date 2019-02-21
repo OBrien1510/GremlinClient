@@ -48,34 +48,69 @@ class GremlinClient:
         keys = list(params.keys())
 
         id = keys[0]
-        base = "g.addV().property(id, '%s')" % params[id]
+
+        if self.check_vertex_exists(params[id]):
+
+            self.update_vertex(params)
+
+        else:
+
+            base = "g.addV().property(id, '%s')" % params[id]
+
+            for i in keys[1:]:
+                new = ".property('%s', '%s')" % (i, params[i])
+                base = base + new
+
+            print(base)
+
+            try:
+
+                callback = self.client.submitAsync(base)
+
+                if callback.result() is not None:
+
+                    print(callback.result().one())
+                    print("Success at adding vertex")
+
+                else:
+
+                    print("Something went wrong when adding vertex")
+
+            except Exception as e:
+
+                print("Error adding vertex", params[id])
+                print(e)
+
+
+    def update_vertex(self, params):
+
+        base = "g.V().hasID('%s')" % params["id"]
+
+        keys = list(params.keys())
 
         for i in keys[1:]:
-            new = ".property('%s', '%s')" % (i, params[i])
-            base = base + new
 
-        print(base)
+            base = base + ".property('%s', '%s')" % (i, params[i])
 
         try:
 
-            callback = self.client.submitAsync(base)
+            recall = self.client.submitAsync(base)
 
-            if callback.result() is not None:
+            if recall.result() is not None:
 
-                print(callback.result().one())
-                print("Success at adding vertex")
-
-            else:
-
-                print("Something went wrong when adding vertex")
+                print("Updated vertex", params["id"])
+                print(recall.result().one())
 
         except Exception as e:
 
-            print("Error adding vertex", params[id])
+            print("error when updating vertex", params["id"])
             print(e)
 
+    def add_edge(self, params1, params2):
 
-    def add_edge(self, id1, id2):
+        #ToDo edges aren't being added properly
+        # one vertex will have the correct in and out edge but the other will
+        # only have the correct out edge and the other edge will be pointing to itself
 
         """
         add edge between two specified vertices
@@ -83,12 +118,26 @@ class GremlinClient:
         :param id2:
         :return:
         """
+
+        id1 = params1["id"]
+        id2 = params2["id"]
+
+        ids = [params1, params2]
+
+        for i in ids:
+
+            if not self.check_vertex_exists(i["id"]):
+                print("Adding vertex", i)
+                self.add_vertex(i)
+
         base1 = "g.V('%s').addE('related_to').to(g.V('%s'))" % (id1, id2)
         base2 = "g.V('%s').addE('related_to').to(g.V('%s'))" % (id2, id1)
 
         edges = [base1, base2]
 
         for i in edges:
+
+            print(i)
 
             try:
 
@@ -97,7 +146,7 @@ class GremlinClient:
                 if callback.result() is not None:
 
                     print(callback.result().one())
-                    print("Success at adding edge")
+                    print("Success at adding edge between", id1, "and", id2)
 
                 else:
 
@@ -108,6 +157,23 @@ class GremlinClient:
                 print("Something went wrong when adding edge between", id1, "and", id2)
                 print(e)
 
+
+    def check_vertex_exists(self, id1):
+
+        base = "g.V().hasId('%s')" % id1
+
+        recall = self.client.submitAsync(base)
+
+        if len(recall.result().one()) == 0:
+
+            return False
+
+        else:
+
+            return True
+
+
+
     def get_distance(self, id1, id2):
 
         base = "g.V('%s').repeat(out().simplePath()).until(has('id', '%s')).path().limit(1)" % (id1, id2)
@@ -117,8 +183,8 @@ class GremlinClient:
             distance = self.client.submitAsync(base)
             if distance.result() is not None:
                 distance = distance.result().one()
-                
-                return (len(distance[0]["labels"]) - 2)
+
+                return len(distance[0]["labels"]) - 2
 
         except Exception as e:
 
@@ -126,5 +192,39 @@ class GremlinClient:
             print(e)
 
 
+    def get_vertex(self, params):
+
+        property_title = list(params.keys())[0]
+
+        property_value = params[property_title]
+
+        base = "g.v().has('%s', '%s')" %(property_title, property_value)
+
+        recall = self.client.submitAsync(base)
+
+        if recall.result() is not None:
+
+            return recall.result().one()
+
+        else:
+
+            return False
+
+    def delete_graph(self):
+
+        confirmation = input("Are you sure you wish to delete the entire graph? (Y/N)")
+
+        while confirmation != "Y" and confirmation != "N":
+
+            confirmation = input("Please use Y or N to confirm")
+            print(confirmation)
+
+        if confirmation == "Y":
+
+            base = "g.V().drop()"
+
+            recall = self.client.submitAsync(base)
+
+            recall.result().one()
 
 
